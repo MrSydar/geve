@@ -1,5 +1,5 @@
 package schema
 
-type Basic struct {
+type basic struct {
 	Required bool
 }

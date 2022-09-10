@@ -1,3 +1,3 @@
-module mrsydar/geve
+module mrsydar/jschema
 
 go 1.19

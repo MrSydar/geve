@@ -26,8 +26,8 @@ func TestBadBoundaries(t *testing.T) {
 
 func TestVerifyValueStringFitsLength(t *testing.T) {
 	ts := String{
-		MinLength: 10,
-		MaxLength: 20,
+		MinLength: 5,
+		MaxLength: 10,
 	}
 
 	if err := ts.verifyValue("hello"); err != nil {
@@ -37,8 +37,8 @@ func TestVerifyValueStringFitsLength(t *testing.T) {
 
 func TestVerifyValueStringDoesNotFitLength(t *testing.T) {
 	ts := String{
-		MinLength: 10,
-		MaxLength: 20,
+		MinLength: 5,
+		MaxLength: 10,
 	}
 
 	if err := ts.verifyValue("hello world"); err == nil {

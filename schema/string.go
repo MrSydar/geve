@@ -7,7 +7,7 @@ type String struct {
 	MinLength, MaxLength uint64
 }
 
-func (ks *String) verifyDefinition() error {
+func (ks String) verifyDefinition() error {
 	if ks.MinLength > ks.MaxLength {
 		return fmt.Errorf("min length (%v) is greater than max length (%v)", ks.MinLength, ks.MaxLength)
 	}
@@ -15,7 +15,7 @@ func (ks *String) verifyDefinition() error {
 	return nil
 }
 
-func (ks *String) verifyValue(v any) error {
+func (ks String) verifyValue(v any) error {
 	s, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("value is not a string")

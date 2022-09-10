@@ -9,22 +9,24 @@ type String struct {
 
 func (ts String) verifyDefinition() error {
 	if ts.MinLength > ts.MaxLength {
-		return fmt.Errorf("value of field MaxLength cannot be greater than value of field MaxLength")
+		return fmt.Errorf("min length (%v) is greater than max length (%v)", ts.MinLength, ts.MaxLength)
 	}
 
 	return nil
 }
 
-// TODO how to make it verifyValue(string) ?
 func (ts String) verifyValue(v any) error {
-	strValue, ok := v.(string)
-
+	s, ok := v.(string)
 	if !ok {
-		return fmt.Errorf("passed value cannot be asserted to a string type")
+		return fmt.Errorf("value is not a string")
 	}
 
-	if length := uint64(len(strValue)); length < ts.MinLength || length > ts.MaxLength {
-		return fmt.Errorf("length doesn't fit the defined boundaries")
+	if len(s) < int(ts.MinLength) {
+		return fmt.Errorf("value is shorter than min length (%v)", ts.MinLength)
+	}
+
+	if len(s) > int(ts.MaxLength) {
+		return fmt.Errorf("value is longer than max length (%v)", ts.MaxLength)
 	}
 
 	return nil

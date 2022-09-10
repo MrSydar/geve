@@ -2,20 +2,19 @@ package schema
 
 import "fmt"
 
-type geveType interface {
+type kind interface {
 	verifyDefinition() error
-	verifyValue(v any) error
+	verifyValue(any) error
 }
 
-type FieldName = string
+type Schema map[string]kind
 
-type Schema map[FieldName]geveType
-
-func (s Schema) Verify() error {
-	for k, v := range s {
+func (s *Schema) Verify() error {
+	for k, v := range *s {
 		if err := v.verifyDefinition(); err != nil {
-			return fmt.Errorf("verification of field <%v> has failed: %w", k, err)
+			return fmt.Errorf("error in definition of %v: %w", k, err)
 		}
 	}
+
 	return nil
 }

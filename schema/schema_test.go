@@ -1,32 +1,49 @@
 package schema
 
 import (
-	"encoding/json"
 	"testing"
+
+	"golang.org/x/exp/slices"
 )
 
 func TestEmptyCompiledSchema(t *testing.T) {
 	schema := make(Schema)
 
-	jsonSchema, err := schema.ToJSONSchema()
+	jsonSchema, err := schema.Compile()
 	if err != nil {
-		t.Errorf("failed to compile schema: %s", err)
+		t.Fatalf("failed to compile schema: %s", err)
 	}
 
-	jsonSchemaUnmarhsaled := make(map[string]any)
-	if err := json.Unmarshal(jsonSchema, &jsonSchemaUnmarhsaled); err != nil {
-		t.Errorf("failed to unmarshal json schema: %s", err)
+	if jsonSchema["type"] != "object" {
+		t.Fatalf("expected type to be object")
 	}
 
-	if jsonSchemaUnmarhsaled["type"] != "object" {
-		t.Errorf("expected type to be object, got %s", jsonSchemaUnmarhsaled["type"])
+	if jsonSchema["title"] != "mrsydar/jsonschema" {
+		t.Fatalf("expected title to be mrsydar/jsonschema")
 	}
 
-	if jsonSchemaUnmarhsaled["title"] != "mrsydar/jsonschema" {
-		t.Errorf("expected title to be mrsydar/jsonschema, got %s", jsonSchemaUnmarhsaled["title"])
+	if len(jsonSchema["required"].([]string)) != 0 {
+		t.Fatalf("expected required to be empty")
+	}
+}
+
+func TestCompiledSchemaWithString(t *testing.T) {
+	schema := Schema{
+		"field_1": String{
+			Common{
+				Required: true,
+				Nullable: true,
+			},
+		},
 	}
 
-	if len(jsonSchemaUnmarhsaled["required"].([]any)) != 0 {
-		t.Errorf("expected required to be empty, got %s", jsonSchemaUnmarhsaled["required"])
+	jsonSchema, err := schema.Compile()
+	if err != nil {
+		t.Fatalf("failed to compile schema: %s", err)
+	}
+
+	bsonType := jsonSchema["properties"].(map[string]map[string]any)["field_1"]["bsonType"].([]string)
+	if len(bsonType) != 2 || !slices.Contains(bsonType, "string") || !slices.Contains(bsonType, "null") {
+		t.Fatalf("expected bsonType to have 2 items (string and null), got %v", bsonType)
 	}
 }

@@ -1,30 +1,32 @@
+// Package schema implements a JSON Schema compiler.
 package schema
 
-import (
-	"encoding/json"
-	"fmt"
-)
+// kind represents the type of a JSON Schema property.
+type kind interface {
+	isRequired() bool
+	compileProperties() map[string]any
+}
 
-type kindName = string
-type Schema map[kindName]basic
+// Schema is used to configure a mongodb collection.
+type Schema map[string]kind
 
-func (s *Schema) ToJSONSchema() ([]byte, error) {
+// compile converts a Schema to a JSON Schema draft-04.
+func (s *Schema) Compile() (map[string]any, error) {
 	jsonSchema := make(map[string]any)
 
 	jsonSchema["type"] = "object"
 	jsonSchema["title"] = "mrsydar/jsonschema"
 	jsonSchema["required"] = []string{}
 
+	properties := make(map[string]map[string]any)
 	for fieldName, fieldSchema := range *s {
-		if fieldSchema.Required {
+		properties[fieldName] = fieldSchema.compileProperties()
+
+		if fieldSchema.isRequired() {
 			jsonSchema["required"] = append(jsonSchema["required"].([]string), fieldName)
 		}
 	}
+	jsonSchema["properties"] = properties
 
-	jsonSchemaBytes, err := json.Marshal(jsonSchema)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal json schema: %s", err)
-	}
-
-	return jsonSchemaBytes, nil
+	return jsonSchema, nil
 }

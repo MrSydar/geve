@@ -1,4 +1,4 @@
-module mrsydar/jsonschema
+module mrsydar/geve
 
 go 1.19
 

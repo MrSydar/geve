@@ -1,5 +1,5 @@
 package schema
 
-type String struct {
+type Integer struct {
 	Common
 }

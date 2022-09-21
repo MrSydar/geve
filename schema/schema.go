@@ -1,32 +1,12 @@
-// Package schema implements a JSON Schema compiler.
 package schema
 
-// kind represents the type of a JSON Schema property.
-type kind interface {
-	isRequired() bool
-	compileProperties() map[string]any
-}
+type (
+	// kind represents a field type.
+	Kind interface{}
 
-// Schema is used to configure a mongodb collection.
-type Schema map[string]kind
+	// FieldName is	 a field name.
+	FieldName = string
 
-// compile converts a Schema to a JSON Schema draft-04.
-func (s *Schema) Compile() (map[string]any, error) {
-	jsonSchema := make(map[string]any)
-
-	jsonSchema["type"] = "object"
-	jsonSchema["title"] = "mrsydar/jsonschema"
-	jsonSchema["required"] = []string{}
-
-	properties := make(map[string]map[string]any)
-	for fieldName, fieldSchema := range *s {
-		properties[fieldName] = fieldSchema.compileProperties()
-
-		if fieldSchema.isRequired() {
-			jsonSchema["required"] = append(jsonSchema["required"].([]string), fieldName)
-		}
-	}
-	jsonSchema["properties"] = properties
-
-	return jsonSchema, nil
-}
+	// Schema represents a schema definition.
+	Schema map[FieldName]Kind
+)

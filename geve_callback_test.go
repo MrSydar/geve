@@ -1,6 +1,10 @@
 package geve
 
-import "testing"
+import (
+	"testing"
+
+	"go.mongodb.org/mongo-driver/mongo"
+)
 
 type MockObject struct {
 	MockField string `json:"mock_field"`
@@ -58,9 +62,11 @@ func (m *MockController) GetMany(readMany func(collection string) ([]any, error)
 }
 
 func Test(t *testing.T) {
+	m, _ := mongo.NewClient(nil)
+
 	c := Config{
 		Schemas:    nil,
-		Client:     &MockClient{},
+		Client:     m,
 		Controller: &MockController{},
 	}
 

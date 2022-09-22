@@ -1,87 +1,45 @@
 package gevemongo
 
 import (
-	"context"
+	"errors"
 	"testing"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type mongoCursorMock struct {
-	allFuncCalled   bool
-	closeFuncCalled bool
+type MongoClientMock struct {
 }
 
-func (m *mongoCursorMock) All(ctx context.Context, v interface{}) error {
-	m.allFuncCalled = true
+func (mcm *MongoClientMock) Database(string, ...*options.DatabaseOptions) *mongo.Database {
 	return nil
 }
 
-func (m *mongoCursorMock) Close(ctx context.Context) error {
-	m.closeFuncCalled = true
-	return nil
-}
+func TestConfigurationNoMongoClientProvided(t *testing.T) {
+	gm, err := NewClient(Config{})
 
-type mongoSingleResultMock struct {
-	decodeFuncCalled bool
-}
-
-func (m *mongoSingleResultMock) Decode(v interface{}) error {
-	m.decodeFuncCalled = true
-	return nil
-}
-
-type mongoCollectionMock struct {
-	findFuncCalled    bool
-	findOneFuncCalled bool
-}
-
-func (m *mongoCollectionMock) FindOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) singleResult {
-	m.findOneFuncCalled = true
-	return &mongoSingleResultMock{}
-}
-
-func (m *mongoCollectionMock) Find(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (cursor, error) {
-	m.findFuncCalled = true
-	return &mongoCursorMock{}, nil
-}
-
-type mongoDatabaseMock struct {
-	collectionFuncCalled bool
-}
-
-func (m *mongoDatabaseMock) Collection(name string, opts ...*options.CollectionOptions) collection {
-	m.collectionFuncCalled = true
-	return &mongoCollectionMock{}
-}
-
-type mongoClientMock struct {
-	databaseFuncCalled bool
-}
-
-func (m *mongoClientMock) Database(name string, opts ...*options.DatabaseOptions) database {
-	if name != "test" {
-		panic("wrong name")
+	if gm != nil {
+		t.Errorf("expected nil")
 	}
 
-	m.databaseFuncCalled = true
-
-	return &mongoDatabaseMock{}
+	if !errors.Is(err, ErrMongoClientRequired) {
+		t.Errorf("expected error to be %v, got %v", ErrMongoClientRequired, err)
+	}
 }
 
-func TestConfiguration(t *testing.T) {
-	mcm := &mongoClientMock{}
-
-	gm := GeveMongo{
-		client: mcm,
-	}
-
-	gm.Configure(Config{
-		Schemas:      nil,
+func TestConfigurationNoDatabaseNameProvided(t *testing.T) {
+	config := Config{
+		MongoClient:  &MongoClientMock{},
 		DatabaseName: "test",
-	})
+	}
 
-	if mcm.databaseFuncCalled != true {
-		t.Error("database function not called")
+	gm, err := NewClient(config)
+
+	if gm != nil {
+		t.Errorf("expected nil")
+	}
+
+	if !errors.Is(err, ErrDatabaseNameRequired) {
+		t.Errorf("expected error to be %v, got %v", ErrDatabaseNameRequired, err)
 	}
 }

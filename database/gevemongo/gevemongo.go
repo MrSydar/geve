@@ -8,17 +8,18 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-type GeveMongo struct {
-	client
-	collections map[string]collection
+type geveMongo struct {
+	IClient
+	collections map[string]ICollection
 }
 
 type Config struct {
+	MongoClient  IClient
 	Schemas      map[string]schema.Schema
 	DatabaseName string
 }
 
-func (gm *GeveMongo) ReadOne(collection, id string) (any, error) {
+func (gm *geveMongo) ReadOne(collection, id string) (any, error) {
 	var item any
 
 	err := gm.collections[collection].FindOne(context.TODO(), bson.M{"_id": id}).Decode(&item)
@@ -29,30 +30,24 @@ func (gm *GeveMongo) ReadOne(collection, id string) (any, error) {
 	return item, nil
 }
 
-// TODO: implement limit, default limit
-func (gm *GeveMongo) ReadMany(collection string) ([]any, error) {
-	items := []any{}
-
-	cursor, err := gm.collections[collection].Find(context.TODO(), bson.M{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to find items: %w", err)
+func NewClient(c Config) (*geveMongo, error) {
+	if c.MongoClient == nil {
+		return nil, ErrMongoClientRequired
 	}
 
-	defer cursor.Close(context.TODO())
-
-	if err := cursor.All(context.TODO(), &items); err != nil {
-		return nil, fmt.Errorf("failed to read items: %w", err)
+	gm := &geveMongo{
+		IClient:     c.MongoClient,
+		collections: make(map[string]ICollection),
 	}
 
-	return items, nil
-}
-
-func (gm *GeveMongo) Configure(c Config) {
-	gm.collections = make(map[string]collection)
+	if c.DatabaseName == "" {
+		return nil, ErrDatabaseNameRequired
+	}
 
 	db := gm.Database(c.DatabaseName)
-
 	for name := range c.Schemas {
 		gm.collections[name] = db.Collection(name)
 	}
+
+	return gm, nil
 }

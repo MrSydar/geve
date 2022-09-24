@@ -3,22 +3,21 @@ package gevemongo
 import (
 	"context"
 
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type IClient interface {
-	Database(string, ...*options.DatabaseOptions) *mongo.Database
+type iClient interface {
+	database(string, ...*options.DatabaseOptions) iDatabase
 }
 
-type IDatabase interface {
-	Collection(string, ...*options.CollectionOptions) *mongo.Collection
+type iDatabase interface {
+	collection(string, ...*options.CollectionOptions) iCollection
 }
 
-type ICollection interface {
-	FindOne(context.Context, interface{}, ...*options.FindOneOptions) *mongo.SingleResult
+type iCollection interface {
+	findOne(context.Context, interface{}, ...*options.FindOneOptions) iSingleResult
 }
 
-type ISingleResult interface {
-	Decode(v interface{}) error
+type iSingleResult interface {
+	decode(v interface{}) error
 }

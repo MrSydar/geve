@@ -8,15 +8,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type MongoClientMock struct {
+type mongoClientMock struct {
 }
 
-func (mcm *MongoClientMock) Database(string, ...*options.DatabaseOptions) *mongo.Database {
+func (mcm *mongoClientMock) database(string, ...*options.DatabaseOptions) iDatabase {
 	return nil
 }
 
 func TestConfigurationNoMongoClientProvided(t *testing.T) {
-	gm, err := NewClient(Config{})
+	config := Config{}
+
+	gm, err := New(config)
 
 	if gm != nil {
 		t.Errorf("expected nil")
@@ -29,11 +31,10 @@ func TestConfigurationNoMongoClientProvided(t *testing.T) {
 
 func TestConfigurationNoDatabaseNameProvided(t *testing.T) {
 	config := Config{
-		MongoClient:  &MongoClientMock{},
-		DatabaseName: "test",
+		Client: &mongoClientMock{},
 	}
 
-	gm, err := NewClient(config)
+	gm, err := New(config)
 
 	if gm != nil {
 		t.Errorf("expected nil")
@@ -42,4 +43,15 @@ func TestConfigurationNoDatabaseNameProvided(t *testing.T) {
 	if !errors.Is(err, ErrDatabaseNameRequired) {
 		t.Errorf("expected error to be %v, got %v", ErrDatabaseNameRequired, err)
 	}
+}
+
+func ExampleMongoClient() {
+	mc, _ := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+
+	config := Config{
+		Client:       MongoClient(mc),
+		DatabaseName: "items",
+	}
+
+	New(config)
 }

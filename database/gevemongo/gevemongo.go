@@ -9,12 +9,12 @@ import (
 )
 
 type geveMongo struct {
-	IClient
-	collections map[string]ICollection
+	iClient
+	collections map[string]iCollection
 }
 
 type Config struct {
-	MongoClient  IClient
+	Client       iClient
 	Schemas      map[string]schema.Schema
 	DatabaseName string
 }
@@ -22,7 +22,7 @@ type Config struct {
 func (gm *geveMongo) ReadOne(collection, id string) (any, error) {
 	var item any
 
-	err := gm.collections[collection].FindOne(context.TODO(), bson.M{"_id": id}).Decode(&item)
+	err := gm.collections[collection].findOne(context.TODO(), bson.M{"_id": id}).decode(&item)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find item: %w", err)
 	}
@@ -30,23 +30,23 @@ func (gm *geveMongo) ReadOne(collection, id string) (any, error) {
 	return item, nil
 }
 
-func NewClient(c Config) (*geveMongo, error) {
-	if c.MongoClient == nil {
+func New(c Config) (*geveMongo, error) {
+	if c.Client == nil {
 		return nil, ErrMongoClientRequired
 	}
 
 	gm := &geveMongo{
-		IClient:     c.MongoClient,
-		collections: make(map[string]ICollection),
+		c.Client,
+		make(map[string]iCollection),
 	}
 
 	if c.DatabaseName == "" {
 		return nil, ErrDatabaseNameRequired
 	}
 
-	db := gm.Database(c.DatabaseName)
+	db := gm.database(c.DatabaseName)
 	for name := range c.Schemas {
-		gm.collections[name] = db.Collection(name)
+		gm.collections[name] = db.collection(name)
 	}
 
 	return gm, nil

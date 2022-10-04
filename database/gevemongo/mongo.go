@@ -13,6 +13,8 @@ type mongoClient struct {
 
 func (c *mongoClient) database(name string, opts ...*options.DatabaseOptions) iDatabase {
 	return nil
+}
+
 type singleResult struct {
 	*mongo.SingleResult
 }
@@ -47,9 +49,5 @@ func (c *client) database(name string, opts ...*options.DatabaseOptions) iDataba
 
 // MongoClient wraps a mongo.Client.
 func MongoClient(c *mongo.Client) iClient {
-<<<<<<< HEAD
-	return &mongoClient{c}
-=======
 	return &client{c}
->>>>>>> 87bb281 (Selected optimal direction for gevemongo configuration)
 }

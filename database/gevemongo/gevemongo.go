@@ -2,21 +2,15 @@ package gevemongo
 
 import (
 	"context"
-	"fmt"
 	"mrsydar/geve/schema"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// geveMongo is a MongoDB implementation of the geve database client interface.
 type geveMongo struct {
 	iClient
 	collections map[string]iCollection
-}
-
-type Config struct {
-	Client       iClient
-	Schemas      map[string]schema.Schema
-	DatabaseName string
 }
 
 func (gm *geveMongo) ReadOne(collection, id string) (any, error) {
@@ -24,12 +18,20 @@ func (gm *geveMongo) ReadOne(collection, id string) (any, error) {
 
 	err := gm.collections[collection].findOne(context.TODO(), bson.M{"_id": id}).decode(&item)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find item: %w", err)
+		return nil, err
 	}
 
 	return item, nil
 }
 
+// Config is the configuration for GeveMongo.
+type Config struct {
+	Client       iClient
+	Schemas      map[string]schema.Schema
+	DatabaseName string
+}
+
+// New creates a new GeveMongo instance.
 func New(c Config) (*geveMongo, error) {
 	if c.Client == nil {
 		return nil, ErrMongoClientRequired

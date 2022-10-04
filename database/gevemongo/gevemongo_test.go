@@ -1,21 +1,68 @@
 package gevemongo
 
 import (
+	"context"
 	"errors"
+	"mrsydar/geve/schema"
+	"reflect"
 	"testing"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type mongoClientMock struct {
+type mongoSingleResultMock struct {
+	obj any
 }
 
-func (mcm *mongoClientMock) database(string, ...*options.DatabaseOptions) iDatabase {
+func (msrm *mongoSingleResultMock) decode(obj interface{}) error {
+	if msrm.obj == nil {
+		return mongo.ErrNoDocuments
+	}
+
+	dstPtrValue := reflect.ValueOf(obj)
+	dstValue := reflect.Indirect(dstPtrValue)
+
+	srcPtrValue := reflect.ValueOf(msrm.obj)
+
+	dstValue.Set(srcPtrValue)
+
 	return nil
 }
 
-func TestConfigurationNoMongoClientProvided(t *testing.T) {
+type mongoCollectionMock struct {
+	storage map[string]any
+}
+
+func (mcm *mongoCollectionMock) findOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) iSingleResult {
+	bsonFilter := filter.(bson.M)
+	id := bsonFilter["_id"].(string)
+
+	if mcm.storage[id] == nil {
+		return &mongoSingleResultMock{nil}
+	}
+
+	return &mongoSingleResultMock{mcm.storage[id]}
+}
+
+type mongoDatabaseMock struct {
+	coll iCollection
+}
+
+func (mdm *mongoDatabaseMock) collection(string, ...*options.CollectionOptions) iCollection {
+	return mdm.coll
+}
+
+type mongoClientMock struct {
+	db iDatabase
+}
+
+func (mcm *mongoClientMock) database(string, ...*options.DatabaseOptions) iDatabase {
+	return mcm.db
+}
+
+func TestNewWithConfigurationNoMongoClientProvided(t *testing.T) {
 	config := Config{}
 
 	gm, err := New(config)
@@ -29,7 +76,7 @@ func TestConfigurationNoMongoClientProvided(t *testing.T) {
 	}
 }
 
-func TestConfigurationNoDatabaseNameProvided(t *testing.T) {
+func TestNewWithConfigurationNoDatabaseNameProvided(t *testing.T) {
 	config := Config{
 		Client: &mongoClientMock{},
 	}
@@ -45,13 +92,159 @@ func TestConfigurationNoDatabaseNameProvided(t *testing.T) {
 	}
 }
 
-func ExampleMongoClient() {
+func TestNewWithConfigurationNoSchemaProvided(t *testing.T) {
+	config := Config{
+		Client:       &mongoClientMock{},
+		DatabaseName: "items",
+	}
+
+	gm, err := New(config)
+
+	if gm == nil {
+		t.Fatalf("expected not nil")
+	}
+
+	if err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+
+	if gm.collections == nil {
+		t.Errorf("expected not nil")
+	}
+
+	if len(gm.collections) != 0 {
+		t.Errorf("expected 0, got %v", len(gm.collections))
+	}
+}
+
+func TestNewConfigurationWithSchemaProvided(t *testing.T) {
+	config := Config{
+		Client: &mongoClientMock{
+			db: &mongoDatabaseMock{},
+		},
+		Schemas: map[string]schema.Schema{
+			"items": {
+				"_id":      schema.String{},
+				"quantity": schema.Integer{},
+			},
+		},
+		DatabaseName: "test-db",
+	}
+
+	gm, err := New(config)
+
+	if gm == nil {
+		t.Fatalf("expected not nil")
+	}
+
+	if err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+
+	if gm.collections == nil {
+		t.Errorf("expected not nil")
+	}
+
+	if len(gm.collections) != 1 {
+		t.Errorf("expected 1")
+	}
+
+	if _, ok := gm.collections["items"]; !ok {
+		t.Errorf("expected key to exist")
+	}
+}
+
+func ExampleNew() {
 	mc, _ := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
 
 	config := Config{
 		Client:       MongoClient(mc),
-		DatabaseName: "items",
+		DatabaseName: "test-db",
 	}
 
-	New(config)
+	_, _ = New(config)
+}
+
+func ExampleMongoClient() {
+	mc, _ := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+
+	_ = Config{
+		Client:       MongoClient(mc),
+		DatabaseName: "items",
+	}
+}
+
+func TestReadOneNoDocumentFound(t *testing.T) {
+	config := Config{
+		Client: &mongoClientMock{
+			db: &mongoDatabaseMock{
+				coll: &mongoCollectionMock{
+					storage: map[string]any{},
+				},
+			},
+		},
+		Schemas: map[string]schema.Schema{
+			"items": {
+				"_id":      schema.String{},
+				"quantity": schema.Integer{},
+			},
+		},
+		DatabaseName: "test-db",
+	}
+
+	gm, _ := New(config)
+
+	obj, err := gm.ReadOne("items", "123")
+
+	if obj != nil {
+		t.Errorf("expected nil")
+	}
+
+	if !errors.Is(err, mongo.ErrNoDocuments) {
+		t.Errorf("expected error to be %v, got %v", mongo.ErrNoDocuments, err)
+	}
+}
+
+func TestReadOneDocumentFound(t *testing.T) {
+	type item struct {
+		ID       string `bson:"_id"`
+		Quantity int    `bson:"quantity"`
+	}
+
+	expectedItem := item{"123", 10}
+
+	config := Config{
+		Client: &mongoClientMock{
+			db: &mongoDatabaseMock{
+				coll: &mongoCollectionMock{
+					storage: map[string]any{
+						"123": expectedItem,
+					},
+				},
+			},
+		},
+		Schemas: map[string]schema.Schema{
+			"items": {
+				"_id":      schema.String{},
+				"quantity": schema.Integer{},
+			},
+		},
+		DatabaseName: "test-db",
+	}
+
+	gm, _ := New(config)
+
+	obj, err := gm.ReadOne("items", expectedItem.ID)
+
+	if obj == nil {
+		t.Errorf("expected not nil")
+	}
+
+	if err != nil {
+		t.Errorf("expected nil, got %v", err)
+	}
+
+	if obj.(item) != expectedItem {
+		t.Errorf("expected %v, got %v", expectedItem, obj)
+	}
 }

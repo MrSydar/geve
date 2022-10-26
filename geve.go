@@ -2,7 +2,6 @@ package geve
 
 import (
 	"mrsydar/geve/database"
-	"mrsydar/geve/schema"
 	"mrsydar/geve/server"
 )
 
@@ -11,15 +10,18 @@ type geve struct {
 	controller server.Controller
 }
 
+func (g *geve) Start() error {
+	return g.controller.Start()
+}
+
 type Config struct {
-	Schemas    map[string]schema.Schema
 	Client     database.Client
 	Controller server.Controller
 }
 
 func New(c Config) *geve {
 	c.Controller.GetOne(c.Client.ReadOne)
-	c.Controller.GetMany(c.Client.ReadMany)
+	c.Controller.PostOne(c.Client.InsertOne)
 
 	return &geve{
 		client:     c.Client,

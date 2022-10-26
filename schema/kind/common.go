@@ -1,4 +1,4 @@
-package schema
+package kind
 
 // Common is a set of common configuration options for all types of fields.
 type Common struct {

@@ -21,10 +21,10 @@ func (msrm *mongoSingleResultMock) decode(obj interface{}) error {
 		return mongo.ErrNoDocuments
 	}
 
+	srcPtrValue := reflect.ValueOf(msrm.obj)
+
 	dstPtrValue := reflect.ValueOf(obj)
 	dstValue := reflect.Indirect(dstPtrValue)
-
-	srcPtrValue := reflect.ValueOf(msrm.obj)
 
 	dstValue.Set(srcPtrValue)
 
@@ -62,7 +62,7 @@ func (mcm *mongoClientMock) database(string, ...*options.DatabaseOptions) iDatab
 	return mcm.db
 }
 
-func TestNewWithConfigurationNoMongoClientProvided(t *testing.T) {
+func TestNewWithConfigurationWithoutNoMongoClient(t *testing.T) {
 	config := Config{}
 
 	gm, err := New(config)
@@ -76,7 +76,7 @@ func TestNewWithConfigurationNoMongoClientProvided(t *testing.T) {
 	}
 }
 
-func TestNewWithConfigurationNoDatabaseNameProvided(t *testing.T) {
+func TestNewWithConfigurationWithoutDatabaseName(t *testing.T) {
 	config := Config{
 		Client: &mongoClientMock{},
 	}
@@ -92,7 +92,7 @@ func TestNewWithConfigurationNoDatabaseNameProvided(t *testing.T) {
 	}
 }
 
-func TestNewWithConfigurationNoSchemaProvided(t *testing.T) {
+func TestNewWithConfigurationWithoutSchema(t *testing.T) {
 	config := Config{
 		Client:       &mongoClientMock{},
 		DatabaseName: "items",
@@ -117,7 +117,7 @@ func TestNewWithConfigurationNoSchemaProvided(t *testing.T) {
 	}
 }
 
-func TestNewConfigurationWithSchemaProvided(t *testing.T) {
+func TestNewConfigurationWithSchema(t *testing.T) {
 	config := Config{
 		Client: &mongoClientMock{
 			db: &mongoDatabaseMock{},
@@ -151,26 +151,6 @@ func TestNewConfigurationWithSchemaProvided(t *testing.T) {
 
 	if _, ok := gm.collections["items"]; !ok {
 		t.Errorf("expected key to exist")
-	}
-}
-
-func ExampleNew() {
-	mc, _ := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
-
-	config := Config{
-		Client:       MongoClient(mc),
-		DatabaseName: "test-db",
-	}
-
-	_, _ = New(config)
-}
-
-func ExampleMongoClient() {
-	mc, _ := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
-
-	_ = Config{
-		Client:       MongoClient(mc),
-		DatabaseName: "items",
 	}
 }
 
@@ -234,9 +214,9 @@ func TestReadOneDocumentFound(t *testing.T) {
 
 	gm, _ := New(config)
 
-	obj, err := gm.ReadOne("items", expectedItem.ID)
+	actualObj, err := gm.ReadOne("items", expectedItem.ID)
 
-	if obj == nil {
+	if actualObj == nil {
 		t.Errorf("expected not nil")
 	}
 
@@ -244,7 +224,27 @@ func TestReadOneDocumentFound(t *testing.T) {
 		t.Errorf("expected nil, got %v", err)
 	}
 
-	if obj.(item) != expectedItem {
-		t.Errorf("expected %v, got %v", expectedItem, obj)
+	if actualObj.(item) != expectedItem {
+		t.Errorf("expected %v, got %v", expectedItem, actualObj)
+	}
+}
+
+func ExampleNew() {
+	mc, _ := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+
+	config := Config{
+		Client:       MongoClient(mc),
+		DatabaseName: "test-db",
+	}
+
+	_, _ = New(config)
+}
+
+func ExampleMongoClient() {
+	mc, _ := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+
+	_ = Config{
+		Client:       MongoClient(mc),
+		DatabaseName: "test-db",
 	}
 }
